@@ -90,8 +90,8 @@ $ go install github.com/YangTaeyoung/gombok@v1.0.0
 ## Trouble Shooting 👊
 
 ```bash
-$ aws-secret-gen
-> zsh: command not found: aims-cli
+$ gombok
+> zsh: command not found: gombok
 ```
 
 go로 설치한 프로그램을 실행할 때 발생하는 에러입니다. ~/.zshrc 파일(혹은 ~/.bashrc)의 하단에 다음과 같이 환경변수를 추가합니다.
