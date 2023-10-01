@@ -44,27 +44,27 @@ $ go install github.com/YangTaeyoung/gombok@v1.0.0
     }
     
     // SetName sets the Name field of the target Test
-    func (b *TestBuilder) WithName(value string) *TestBuilder {
-        b.target.Name = value
+    func (tb TestBuilder) WithName(name string) TestBuilder {
+        tb.target.Name = name
     
-        return b
+        return tb
     }
     
     // SetAge sets the Age field of the target Test
-    func (b *TestBuilder) WithAge(value int) *TestBuilder {
-        b.target.Age = value
+    func (tb TestBuilder) WithAge(age int) TestBuilder {
+        tb.target.Age = age
     
-        return b
+        return tb
     }
     
     // Build constructs a Test from the builder
-    func (b *TestBuilder) Build() *Test {
-        return b.target
+    func (tb TestBuilder) Build() Test {
+        return *tb.target
     }
     
     // NewTestBuilder creates a new builder instance for Test
-    func NewTestBuilder() *TestBuilder {
-        return &TestBuilder{target: &Test{}}
+    func NewTestBuilder() TestBuilder {
+        return TestBuilder{target: &Test{}}
     }
     ```
 4. 이제 다음과 같이 쉽게 만들어 진 함수를 사용할 수 있습니다.
@@ -86,6 +86,27 @@ $ go install github.com/YangTaeyoung/gombok@v1.0.0
 | `@ToString` | ToString 함수를 생성합니다.                                            |
 | `@Equals` | Equals 함수를 생성합니다.                                              | 
 
+# Tags
+다음 태그를 이용하여 gombok을 통해 생성되는 함수의 동작을 변경할 수 있습니다.
+
+| Tag           | Value | Description                                                                                             |
+|---------------| --- |---------------------------------------------------------------------------------------------------------|
+| `validate`    | `required` | @RequiredArgsConstructor 어노테이션을 통해 생성되는 필드를 지정할 수 있습니다.                                                 |
+| `constructor` | `ignore` | 해당 태그가 지정된 필드의 경우 `@AllArgsConstructor`, `@RequiredArgsConstructor` 어노테이션을 통해 생성되는 Constructor에서 제외됩니다. |
+| `builder`     | `ignore` | 해당 태그가 지정된 필드의 경우 `@Builder` 어노테이션을 통해 생성되는 `Builder`에서 `WithXXX()` 메서드가 생성되지 않습니다.                     |
+| `getter`      | `ignore` | 해당 태그가 지정된 필드의 경우 `@Getter` 어노테이션을 통해 생성되는 해당 필드의 Getter 메서드가 생성되지 않습니다.                                |
+| `setter`      | `ignore` | 해당 태그가 지정된 필드의 경우 `@Setter` 어노테이션을 통해 생성되는 해당 필드의 Setter 메서드가 생성되지 않습니다.                                |
+| `to_string`   | `ignore` | 해당 태그가 지정된 필드의 경우 `@ToString` 어노테이션을 통해 생성되는 `String()` 메서드에서 제외됩니다.                                    |
+
+
+## Example 
+```go
+// @Builder
+type Test struct {
+    Name string `builder:"ignore"`
+    Age  int
+}
+```
 
 ## Trouble Shooting 👊
 
