@@ -43,9 +43,35 @@ func Run() {
 			return err
 		}
 
+		importPkgs := make([]filepkg.ImportPackage, 0)
 		ast.Inspect(file, func(n ast.Node) bool {
+
 			// 주석을 찾는다.
 			switch x := n.(type) {
+			case *ast.ImportSpec:
+				if x.Path != nil {
+					importPath := strings.Trim(x.Path.Value, "\"")
+
+					// 중복을 방지하기 위해 이미 importPkgs에 포함되어 있는지 확인
+					alreadyIncluded := false
+					for _, pkg := range importPkgs {
+						if pkg.Path == importPath {
+							alreadyIncluded = true
+							break
+						}
+					}
+					if !alreadyIncluded {
+						var alias string
+						if x.Name != nil {
+							alias = x.Name.Name
+						}
+
+						importPkgs = append(importPkgs, filepkg.ImportPackage{
+							Alias: alias,
+							Path:  importPath,
+						})
+					}
+				}
 			case *ast.GenDecl:
 				if x.Tok != token.TYPE {
 					return true
@@ -125,7 +151,7 @@ func Run() {
 						}
 						if strings.Contains(comment.Text, "@Equals") {
 							log.Printf("Found @Equals in %s", typeSpec.Name.Name)
-							result, err = generate.Equals(typeSpec.Name.Name, structType.Fields.List)
+							result, err = generate.Equals(typeSpec.Name.Name)
 							if err != nil {
 								log.Println("Error generating Equals:", err)
 								continue
@@ -159,9 +185,10 @@ func Run() {
 					if fileContent != "" {
 						newFileName := strings.TrimSuffix(info.Name(), ".go") + "_gombok.go"
 						newFilePath := filepath.Join(filepath.Dir(path), newFileName)
-						importPkgs := make([]string, 0)
 						if requireReflectPkg {
-							importPkgs = append(importPkgs, "reflect")
+							importPkgs = append(importPkgs, filepkg.ImportPackage{
+								Path: "reflect",
+							})
 						}
 
 						if err = filepkg.WriteFile(file.Name.Name, importPkgs, fileContent, newFilePath); err != nil {
