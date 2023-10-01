@@ -9,7 +9,7 @@ Using this tool, you can easily create and use frequently used utility functions
 
 Type the following command in the terminal.
 ```bash
-$ go install github.com/YangTaeyoung/gombok@v1.0.0
+$ go install github.com/YangTaeyoung/gombok@v1.1.0
 ```
 
 # Usage
@@ -44,27 +44,27 @@ $ gombok
     }
     
     // SetName sets the Name field of the target Test
-    func (b *TestBuilder) WithName(value string) *TestBuilder {
-        b.target.Name = value
+    func (tb TestBuilder) WithName(name string) TestBuilder {
+        tb.target.Name = name
     
-        return b
+        return tb
     }
     
     // SetAge sets the Age field of the target Test
-    func (b *TestBuilder) WithAge(value int) *TestBuilder {
-        b.target.Age = value
+    func (tb TestBuilder) WithAge(age int) TestBuilder {
+        tb.target.Age = age
     
-        return b
+        return tb
     }
     
     // Build constructs a Test from the builder
-    func (b *TestBuilder) Build() *Test {
-        return b.target
+    func (tb TestBuilder) Build() Test {
+        return *tb.target
     }
     
     // NewTestBuilder creates a new builder instance for Test
-    func NewTestBuilder() *TestBuilder {
-        return &TestBuilder{target: &Test{}}
+    func NewTestBuilder() TestBuilder {
+        return TestBuilder{target: &Test{}}
     }
     ```
 4. Now you can use the easily created function as follows.
@@ -85,6 +85,18 @@ $ gombok
 | `@Setter` | Creates a Setter.                                                                |
 | `@ToString` | Creates a `ToString()` function.                                                   |
 | `@Equals` | Creates an `Equals()` function.                                                    |
+
+# Tags
+다음 태그를 이용하여 gombok을 통해 생성되는 함수의 동작을 변경할 수 있습니다.
+
+| Tag           | Value | Description                                                                                             |
+|---------------| --- |---------------------------------------------------------------------------------------------------------|
+| `validate` | `required` | Specifies the fields created by the @RequiredArgsConstructor annotation. |
+| `constructor` | `ignore` | The field with this tag is excluded from the Constructor created by the `@AllArgsConstructor` and `@RequiredArgsConstructor` annotations. |
+| `builder`     | `ignore` | The `WithXXX()` method is not created in the `Builder` created by the `@Builder` annotation for the field with this tag.                     |
+| `getter`      | `ignore` | The Getter method of the corresponding field created by the `@Getter` annotation is not created for the field with this tag.                                |
+| `setter`      | `ignore` | The Setter method of the corresponding field created by the `@Setter` annotation is not created for the field with this tag.                                |
+| `to_string`   | `ignore` | The `String()` method created by the `@ToString` annotation is excluded from the field with this tag.                                    |
 
 
 ## Trouble Shooting 👊
