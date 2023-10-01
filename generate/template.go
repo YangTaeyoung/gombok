@@ -1,79 +1,93 @@
 package generate
 
 // 생성자 함수를 만들기 위한 템플릿을 정의합니다.
-var requiredArgsConstructorTmpl = `func New{{.StructName}}WithRequiredArgs({{range $index, $element := .Fields}}{{if $index}}, {{end}}{{$element.Name}} {{$element.Type}}{{end}}) {{.StructName}} {
+var requiredArgsConstructorTmpl = `
+// New{{.StructName}}WithRequiredArgs
+func New{{.StructName}}WithRequiredArgs({{range $index, $element := .Fields}}{{if $index}}, {{end}}{{LowerCamelCase $element.Name}} {{$element.Type}}{{end}}) {{.StructName}} {
     return {{.StructName}}{
-		{{range .Fields}}{{.Name}}: {{.Name}},
+		{{range .Fields}}{{.Name}}: {{LowerCamelCase .Name}},
 		{{end}}
     }
 }
 `
 
 // 생성자 함수를 만들기 위한 템플릿을 정의합니다.
-var allArgsConstructorTemplate = `func New{{.StructName}}WithAllArgs({{range $index, $element := .Fields}}{{if $index}}, {{end}}{{$element.Name}} {{$element.Type}}{{end}}) {{.StructName}} {
+var allArgsConstructorTemplate = `
+// New{{.StructName}}WithAllArgs
+func New{{.StructName}}WithAllArgs({{range $index, $element := .Fields}}{{if $index}}, {{end}}{{LowerCamelCase $element.Name}} {{$element.Type}}{{end}}) {{.StructName}} {
     return {{.StructName}}{
-        {{range .Fields}}{{.Name}}: {{.Name}},
+        {{range .Fields}}{{.Name}}: {{LowerCamelCase .Name}},
 		{{end}}
     }
 }
 `
 
-var noArgsConstructorTemplate = `func New{{.StructName}}WithNoArgs() {{.StructName}} {
+var noArgsConstructorTemplate = `
+// New{{.StructName}}WithNoArgs
+func New{{.StructName}}WithNoArgs() {{.StructName}} {
     return {{.StructName}}{}
 }
 `
 
 // Builder 패턴을 위한 템플릿을 정의합니다.
 var builderTemplate = `
-// {{.StructName}}Builder is a builder for {{.StructName}}
+// {{.StructName}}Builder
+// a builder for {{.StructName}}
 type {{.StructName}}Builder struct {
     target *{{.StructName}}
 }
 
 {{range .Fields}}
-// Set{{.Name}} sets the {{.Name}} field of the target {{$.StructName}}
-func (b *{{$.StructName}}Builder) With{{.Name}}(value {{.Type}}) *{{$.StructName}}Builder {
-    b.target.{{.Name}} = value
+// With{{.Name}}
+// sets the {{.Name}} field of the target {{$.StructName}}
+func ({{ReceiverName $.StructName}}b {{$.StructName}}Builder) With{{.Name}}({{LowerCamelCase .Name}} {{.Type}}) {{$.StructName}}Builder {
+    {{ReceiverName $.StructName}}b.target.{{.Name}} = {{LowerCamelCase .Name}}
 
-    return b
+    return {{ReceiverName $.StructName}}b
 }
 {{end}}
 
-// Build constructs a {{.StructName}} from the builder
-func (b *{{.StructName}}Builder) Build() *{{.StructName}} {
-    return b.target
+// Build
+// constructs a {{.StructName}} from the builder
+func ({{ReceiverName $.StructName}}b {{.StructName}}Builder) Build() {{.StructName}} {
+    return *{{ReceiverName $.StructName}}b.target
 }
 
-// New{{.StructName}}Builder creates a new builder instance for {{.StructName}}
-func New{{.StructName}}Builder() *{{.StructName}}Builder {
-    return &{{.StructName}}Builder{target: &{{.StructName}}{}}
+// New{{.StructName}}Builder
+// creates a new builder instance for {{.StructName}}
+func New{{.StructName}}Builder() {{.StructName}}Builder {
+    return {{.StructName}}Builder{target: &{{.StructName}}{}}
 }
 `
 
 var toStringTemplate = `
-func (s {{.StructName}}) String() string {
-	return fmt.Sprintf("{{.StructName}}{ {{range $index, $element := .Fields}}{{if $index}}, {{end}}{{.Name}}: %v{{end}} }", {{range $index, $element := .Fields}}{{if $index}}, {{end}}s.{{.Name}}{{end}})
+// String
+func ({{ReceiverName $.StructName}} *{{.StructName}}) String() string {
+	return fmt.Sprintf("{{.StructName}}{ {{range $index, $element := .Fields}}{{if $index}}, {{end}}{{.Name}}: %v{{end}} }", {{range $index, $element := .Fields}}{{if $index}}, {{end}}{{ReceiverName $.StructName}}.{{.Name}}{{end}})
 }
 `
 
 var equalsTemplate = `
-func (s {{.StructName}}) Equals(other {{.StructName}}) bool {
-	return reflect.DeepEqual(s, other)
+// Equals
+func ({{ReceiverName $.StructName}} *{{.StructName}}) Equals({{LowerCamelCase .StructName}} {{.StructName}}) bool {
+	return reflect.DeepEqual({{ReceiverName $.StructName}}, {{LowerCamelCase .StructName}})
 }
 `
 
 var getterTemplate = `
 {{range .Fields}}
-func (s {{$.StructName}}) Get{{.Name}}() {{.Type}} {
-	return s.{{.Name}}
+// Get{{.Name}}
+func ({{ReceiverName $.StructName}} *{{$.StructName}}) Get{{.Name}}() {{.Type}} {
+	return {{ReceiverName $.StructName}}.{{.Name}}
 }
 {{end}}
 `
 
 var setterTemplate = `
 {{range .Fields}}
-func (s *{{$.StructName}}) Set{{.Name}}(value {{.Type}}) {
-	s.{{.Name}} = value
+// Set{{.Name}}
+func ({{ReceiverName $.StructName}} *{{$.StructName}}) Set{{.Name}}({{LowerCamelCase .Name}} {{.Type}}) {
+	{{ReceiverName $.StructName}}.{{.Name}} = {{LowerCamelCase .Name}}
 }
 {{end}}
 `

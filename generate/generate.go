@@ -2,6 +2,7 @@ package generate
 
 import (
 	"bytes"
+	stringpkg "github.com/YangTaeyoung/gombok/strings"
 	"go/ast"
 	"go/printer"
 	"go/token"
@@ -12,7 +13,7 @@ import (
 
 type Field struct {
 	Name string
-	Type string // 필드의 타입을 문자열로 저장합니다.
+	Type string
 }
 
 type StructFields struct {
@@ -32,18 +33,36 @@ func AllArgsConstructor(name string, fields []*ast.Field) (string, error) {
 	// 모든 필드를 리스트에 추가합니다.
 	allFields := make([]Field, 0)
 	for _, field := range fields {
+		if field.Tag != nil {
+			tag := reflect.StructTag(strings.Trim(field.Tag.Value, "`"))
+
+			// 필드에 constructor 태그가 있고 ignore로 정의되어 있다면 필드를 추가하지 않습니다.
+			if value, exists := tag.Lookup("constructor"); exists && strings.Contains(value, "ignore") {
+				continue
+			}
+		}
+
+		// embedded 필드
+		if field.Names == nil {
+			allFields = append(allFields, Field{Name: exprToString(field.Type), Type: exprToString(field.Type)})
+			continue
+		}
+
+		// 일반 필드
 		for _, fieldName := range field.Names {
 			allFields = append(allFields, Field{Name: fieldName.Name, Type: exprToString(field.Type)})
 		}
 	}
 
 	// 템플릿 파싱.
-	tmpl, err := template.New("allArgsConstructorTemplate").Parse(allArgsConstructorTemplate)
+	tmpl, err := template.New("allArgsConstructorTemplate").Funcs(template.FuncMap{
+		"LowerCamelCase": stringpkg.LowerCamel,
+		"ReceiverName":   stringpkg.ReceiverName,
+	}).Parse(allArgsConstructorTemplate)
 	if err != nil {
 		return "", err
 	}
 
-	// 템플릿 데이터를 적용 후 문자열 생성
 	var buf bytes.Buffer
 	err = tmpl.Execute(&buf, StructFields{
 		StructName: name,
@@ -65,15 +84,30 @@ func RequiredArgsConstructor(name string, fields []*ast.Field) (string, error) {
 		if field.Tag != nil {
 			tag := reflect.StructTag(strings.Trim(field.Tag.Value, "`"))
 
+			// 필드에 constructor 태그가 있고 ignore로 정의되어 있다면 필드를 추가하지 않습니다.
+			if value, exists := tag.Lookup("constructor"); exists && strings.Contains(value, "ignore") {
+				continue
+			}
+
 			// 필드에 validate 태그가 있고, required로 정의되어 있다면 필드를 추가.
 			if value, exists := tag.Lookup("validate"); exists && strings.Contains(value, "required") {
+				// embedded 필드
+				if field.Names == nil {
+					requiredFields = append(requiredFields, Field{Name: exprToString(field.Type), Type: exprToString(field.Type)})
+					continue
+				}
+
+				// 일반 필드
 				requiredFields = append(requiredFields, Field{Name: field.Names[0].Name, Type: exprToString(field.Type)})
 			}
 		}
 	}
 
 	// 템플릿을 파싱합니다.
-	tmpl, err := template.New("requiredArgsConstructor").Parse(requiredArgsConstructorTmpl)
+	tmpl, err := template.New("requiredArgsConstructor").Funcs(template.FuncMap{
+		"LowerCamelCase": stringpkg.LowerCamel,
+		"ReceiverName":   stringpkg.ReceiverName,
+	}).Parse(requiredArgsConstructorTmpl)
 	if err != nil {
 		return "", err
 	}
@@ -95,13 +129,11 @@ func RequiredArgsConstructor(name string, fields []*ast.Field) (string, error) {
 }
 
 func NoArgsConstructor(name string) (string, error) {
-	// 템플릿을 파싱합니다.
 	tmpl, err := template.New("noArgsConstructorTemplate").Parse(noArgsConstructorTemplate)
 	if err != nil {
 		return "", err
 	}
 
-	// 템플릿에 데이터를 적용하여 문자열을 생성합니다.
 	var buf bytes.Buffer
 
 	err = tmpl.Execute(&buf, StructFields{
@@ -117,14 +149,33 @@ func NoArgsConstructor(name string) (string, error) {
 }
 
 func Builder(name string, fields []*ast.Field) (string, error) {
-	allFields := make([]Field, len(fields))
-	for i, field := range fields {
+	allFields := make([]Field, 0)
+	for _, field := range fields {
+		if field.Tag != nil {
+			tag := reflect.StructTag(strings.Trim(field.Tag.Value, "`"))
+
+			// 필드에 builder 태그가 있고 ignore로 정의되어 있다면 필드를 추가하지 않습니다.
+			if value, exists := tag.Lookup("builder"); exists && strings.Contains(value, "ignore") {
+				continue
+			}
+		}
+
+		// embedded 필드
+		if field.Names == nil {
+			allFields = append(allFields, Field{Name: exprToString(field.Type), Type: exprToString(field.Type)})
+			continue
+		}
+
+		// 일반 필드
 		for _, fieldName := range field.Names {
-			allFields[i] = Field{Name: fieldName.Name, Type: exprToString(field.Type)}
+			allFields = append(allFields, Field{Name: fieldName.Name, Type: exprToString(field.Type)})
 		}
 	}
 
-	tmpl, err := template.New("builderTemplate").Parse(builderTemplate)
+	tmpl, err := template.New("builderTemplate").Funcs(template.FuncMap{
+		"LowerCamelCase": stringpkg.LowerCamel,
+		"ReceiverName":   stringpkg.ReceiverName,
+	}).Parse(builderTemplate)
 	if err != nil {
 		return "", err
 	}
@@ -143,10 +194,25 @@ func Builder(name string, fields []*ast.Field) (string, error) {
 }
 
 func ToString(name string, fields []*ast.Field) (string, error) {
-	allFields := make([]Field, len(fields))
-	for i, field := range fields {
+	allFields := make([]Field, 0)
+	for _, field := range fields {
+		if field.Tag != nil {
+			tag := reflect.StructTag(strings.Trim(field.Tag.Value, "`"))
+
+			// 필드에 to_string 태그가 있고 ignore로 정의되어 있다면 필드를 추가하지 않습니다.
+			if value, exists := tag.Lookup("to_string"); exists && strings.Contains(value, "ignore") {
+				continue
+			}
+		}
+
+		// embedded 필드
+		if field.Names == nil {
+			allFields = append(allFields, Field{Name: exprToString(field.Type), Type: exprToString(field.Type)})
+			continue
+		}
+		// 일반 필드
 		for _, fieldName := range field.Names {
-			allFields[i] = Field{Name: fieldName.Name, Type: exprToString(field.Type)}
+			allFields = append(allFields, Field{Name: fieldName.Name, Type: exprToString(field.Type)})
 		}
 	}
 
@@ -168,15 +234,11 @@ func ToString(name string, fields []*ast.Field) (string, error) {
 	return buf.String(), nil
 }
 
-func Equals(name string, fields []*ast.Field) (string, error) {
-	allFields := make([]Field, len(fields))
-	for i, field := range fields {
-		for _, fieldName := range field.Names {
-			allFields[i] = Field{Name: fieldName.Name, Type: exprToString(field.Type)}
-		}
-	}
-
-	tmpl, err := template.New("equalsTemplate").Parse(equalsTemplate)
+func Equals(name string) (string, error) {
+	tmpl, err := template.New("equalsTemplate").Funcs(template.FuncMap{
+		"LowerCamelCase": stringpkg.LowerCamel,
+		"ReceiverName":   stringpkg.ReceiverName,
+	}).Parse(equalsTemplate)
 	if err != nil {
 		return "", err
 	}
@@ -184,7 +246,6 @@ func Equals(name string, fields []*ast.Field) (string, error) {
 	var buf bytes.Buffer
 	err = tmpl.Execute(&buf, StructFields{
 		StructName: name,
-		Fields:     allFields,
 	})
 
 	if err != nil {
@@ -195,14 +256,33 @@ func Equals(name string, fields []*ast.Field) (string, error) {
 }
 
 func Getter(name string, fields []*ast.Field) (string, error) {
-	allFields := make([]Field, len(fields))
-	for i, field := range fields {
+	allFields := make([]Field, 0)
+	for _, field := range fields {
+		if field.Tag != nil {
+			tag := reflect.StructTag(strings.Trim(field.Tag.Value, "`"))
+
+			// 필드에 getter 태그가 있고 ignore로 정의되어 있다면 필드를 추가하지 않습니다.
+			if value, exists := tag.Lookup("getter"); exists && strings.Contains(value, "ignore") {
+				continue
+			}
+		}
+
+		// embedded 필드
+		if field.Names == nil {
+			allFields = append(allFields, Field{Name: exprToString(field.Type), Type: exprToString(field.Type)})
+			continue
+		}
+
+		// 일반 필드
 		for _, fieldName := range field.Names {
-			allFields[i] = Field{Name: fieldName.Name, Type: exprToString(field.Type)}
+			allFields = append(allFields, Field{Name: fieldName.Name, Type: exprToString(field.Type)})
 		}
 	}
 
-	tmpl, err := template.New("getterTemplate").Parse(getterTemplate)
+	tmpl, err := template.New("getterTemplate").Funcs(template.FuncMap{
+		"LowerCamelCase": stringpkg.LowerCamel,
+		"ReceiverName":   stringpkg.ReceiverName,
+	}).Parse(getterTemplate)
 	if err != nil {
 		return "", err
 	}
@@ -221,14 +301,33 @@ func Getter(name string, fields []*ast.Field) (string, error) {
 }
 
 func Setter(name string, fields []*ast.Field) (string, error) {
-	allFields := make([]Field, len(fields))
-	for i, field := range fields {
+	allFields := make([]Field, 0)
+	for _, field := range fields {
+		if field.Tag != nil {
+			tag := reflect.StructTag(strings.Trim(field.Tag.Value, "`"))
+
+			// 필드에 setter 태그가 있고 ignore로 정의되어 있다면 필드를 추가하지 않습니다.
+			if value, exists := tag.Lookup("setter"); exists && strings.Contains(value, "ignore") {
+				continue
+			}
+		}
+
+		// embedded 필드
+		if field.Names == nil {
+			allFields = append(allFields, Field{Name: exprToString(field.Type), Type: exprToString(field.Type)})
+			continue
+		}
+
+		// 일반 필드
 		for _, fieldName := range field.Names {
-			allFields[i] = Field{Name: fieldName.Name, Type: exprToString(field.Type)}
+			allFields = append(allFields, Field{Name: fieldName.Name, Type: exprToString(field.Type)})
 		}
 	}
 
-	tmpl, err := template.New("setterTemplate").Parse(setterTemplate)
+	tmpl, err := template.New("setterTemplate").Funcs(template.FuncMap{
+		"LowerCamelCase": stringpkg.LowerCamel,
+		"ReceiverName":   stringpkg.ReceiverName,
+	}).Parse(setterTemplate)
 	if err != nil {
 		return "", err
 	}

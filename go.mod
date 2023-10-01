@@ -2,7 +2,11 @@ module github.com/YangTaeyoung/gombok
 
 go 1.21.1
 
-require github.com/urfave/cli/v2 v2.25.7
+require (
+	github.com/iancoleman/strcase v0.3.0
+	github.com/stoewer/go-strcase v1.3.0
+	github.com/urfave/cli/v2 v2.25.7
+)
 
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
