@@ -22,6 +22,11 @@ func Run() {
 	}
 
 	err = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		var (
+			fileContent       string
+			requireReflectPkg bool
+		)
+
 		if err != nil {
 			return err
 		}
@@ -92,42 +97,55 @@ func Run() {
 						continue
 					}
 
-					var (
-						fileContent       string
-						requireReflectPkg bool
-						result            string
-					)
-
 					for _, comment := range x.Doc.List {
+						var result string
 						if strings.Contains(comment.Text, "@AllArgsConstructor") {
+							var isDefault bool
 							log.Printf("Found @AllArgsConstructor in %s\n", typeSpec.Name.Name)
-							result, err = generate.AllArgsConstructor(typeSpec.Name.Name, structType.Fields.List)
+							if strings.Contains(comment.Text, ".Default") {
+								isDefault = true
+								log.Println("Found Default in @AllArgsConstructor")
+							}
+							result, err = generate.AllArgsConstructor(typeSpec.Name.Name, structType.Fields.List, isDefault)
 							if err != nil {
 								log.Println("Error generating AllArgsConstructor:", err)
 								continue
 							}
 
-							fileContent = fileContent + result
+							fileContent += result
 						}
 						if strings.Contains(comment.Text, "@RequiredArgsConstructor") {
+							var isDefault bool
 							log.Printf("Found @RequiredArgsConstructor in %s\n", typeSpec.Name.Name)
-							result, err = generate.RequiredArgsConstructor(typeSpec.Name.Name, structType.Fields.List)
+							if strings.Contains(comment.Text, ".Default") {
+								isDefault = true
+								log.Println("Found Default in @RequiredArgsConstructor")
+							}
+
+							result, err = generate.RequiredArgsConstructor(typeSpec.Name.Name, structType.Fields.List, isDefault)
 							if err != nil {
 								log.Println("Error generating RequiredArgsConstructor:", err)
 								continue
 							}
 
-							fileContent = fileContent + result
+							fileContent += result
 						}
 						if strings.Contains(comment.Text, "@NoArgsConstructor") {
+							var isDefault bool
 							log.Printf("Found @NoArgsConstructor in %s\n", typeSpec.Name.Name)
-							result, err = generate.NoArgsConstructor(typeSpec.Name.Name)
+
+							if strings.Contains(comment.Text, ".Default") {
+								isDefault = true
+								log.Println("Found Default in @NoArgsConstructor")
+							}
+
+							result, err = generate.NoArgsConstructor(typeSpec.Name.Name, isDefault)
 							if err != nil {
 								log.Println("Error generating NoArgsConstructor:", err)
 								continue
 							}
 
-							fileContent = fileContent + result
+							fileContent += result
 						}
 						if strings.Contains(comment.Text, "@Builder") {
 							log.Printf("Found @Builder in %s\n", typeSpec.Name.Name)
@@ -137,7 +155,8 @@ func Run() {
 								continue
 							}
 
-							fileContent = fileContent + result
+							requireReflectPkg = true
+							fileContent += result
 						}
 						if strings.Contains(comment.Text, "@ToString") {
 							log.Printf("Found @ToString in %s", typeSpec.Name.Name)
@@ -147,7 +166,7 @@ func Run() {
 								continue
 							}
 
-							fileContent = fileContent + result
+							fileContent += result
 						}
 						if strings.Contains(comment.Text, "@Equals") {
 							log.Printf("Found @Equals in %s", typeSpec.Name.Name)
@@ -158,7 +177,7 @@ func Run() {
 							}
 
 							requireReflectPkg = true
-							fileContent = fileContent + result
+							fileContent += result
 						}
 						if strings.Contains(comment.Text, "@Getter") {
 							log.Printf("Found @Getter in %s", typeSpec.Name.Name)
@@ -168,7 +187,7 @@ func Run() {
 								continue
 							}
 
-							fileContent = fileContent + result
+							fileContent += result
 						}
 						if strings.Contains(comment.Text, "@Setter") {
 							log.Printf("Found @Setter in %s", typeSpec.Name.Name)
@@ -178,22 +197,7 @@ func Run() {
 								continue
 							}
 
-							fileContent = fileContent + result
-						}
-					}
-
-					if fileContent != "" {
-						newFileName := strings.TrimSuffix(info.Name(), ".go") + "_gombok.go"
-						newFilePath := filepath.Join(filepath.Dir(path), newFileName)
-						if requireReflectPkg {
-							importPkgs = append(importPkgs, filepkg.ImportPackage{
-								Path: "reflect",
-							})
-						}
-
-						if err = filepkg.WriteFile(file.Name.Name, importPkgs, fileContent, newFilePath); err != nil {
-							log.Println("Error writing file:", err)
-							continue
+							fileContent += result
 						}
 					}
 				}
@@ -201,6 +205,20 @@ func Run() {
 
 			return true
 		})
+
+		if fileContent != "" {
+			newFileName := strings.TrimSuffix(info.Name(), ".go") + "_gombok.go"
+			newFilePath := filepath.Join(filepath.Dir(path), newFileName)
+			if requireReflectPkg {
+				importPkgs = append(importPkgs, filepkg.ImportPackage{
+					Path: "reflect",
+				})
+			}
+
+			if err = filepkg.WriteFile(file.Name.Name, importPkgs, fileContent, newFilePath); err != nil {
+				log.Println("Error writing file:", err)
+			}
+		}
 
 		return nil
 	})

@@ -2,8 +2,8 @@ package generate
 
 // 생성자 함수를 만들기 위한 템플릿을 정의합니다.
 var requiredArgsConstructorTmpl = `
-// New{{.StructName}}WithRequiredArgs
-func New{{.StructName}}WithRequiredArgs({{range $index, $element := .Fields}}{{if $index}}, {{end}}{{LowerCamelCase $element.Name}} {{$element.Type}}{{end}}) {{.StructName}} {
+// New{{ if not .DefaultConstructor }}{{.StructName}}WithRequiredArgs{{end}}
+func New{{ if not .DefaultConstructor }}{{.StructName}}WithRequiredArgs{{end}}({{range $index, $element := .Fields}}{{if $index}}, {{end}}{{LowerCamelCase $element.Name}} {{$element.Type}}{{end}}) {{.StructName}} {
     return {{.StructName}}{
 		{{range .Fields}}{{.Name}}: {{LowerCamelCase .Name}},
 		{{end}}
@@ -13,8 +13,8 @@ func New{{.StructName}}WithRequiredArgs({{range $index, $element := .Fields}}{{i
 
 // 생성자 함수를 만들기 위한 템플릿을 정의합니다.
 var allArgsConstructorTemplate = `
-// New{{.StructName}}WithAllArgs
-func New{{.StructName}}WithAllArgs({{range $index, $element := .Fields}}{{if $index}}, {{end}}{{LowerCamelCase $element.Name}} {{$element.Type}}{{end}}) {{.StructName}} {
+// New{{ if not .DefaultConstructor }}{{.StructName}}WithAllArgs{{end}}
+func New{{ if not .DefaultConstructor }}{{.StructName}}WithAllArgs{{end}}({{range $index, $element := .Fields}}{{if $index}}, {{end}}{{LowerCamelCase $element.Name}} {{$element.Type}}{{end}}) {{.StructName}} {
     return {{.StructName}}{
         {{range .Fields}}{{.Name}}: {{LowerCamelCase .Name}},
 		{{end}}
@@ -23,8 +23,8 @@ func New{{.StructName}}WithAllArgs({{range $index, $element := .Fields}}{{if $in
 `
 
 var noArgsConstructorTemplate = `
-// New{{.StructName}}WithNoArgs
-func New{{.StructName}}WithNoArgs() {{.StructName}} {
+// New{{ if not .DefaultConstructor }}{{.StructName}}WithNoArgs{{end}}
+func New{{ if not .DefaultConstructor }}{{.StructName}}WithNoArgs{{end}}() {{.StructName}} {
     return {{.StructName}}{}
 }
 `
@@ -41,6 +41,11 @@ type {{.StructName}}Builder struct {
 // With{{.Name}}
 // sets the {{.Name}} field of the target {{$.StructName}}
 func ({{ReceiverName $.StructName}}b {{$.StructName}}Builder) With{{.Name}}({{LowerCamelCase .Name}} {{.Type}}) {{$.StructName}}Builder {
+	{{ if .MustBuild }}{{ if .IsPointer }}if {{LowerCamelCase .Name}} == nil {
+		panic("{{$.StructName}}Builder: {{.Name}} must not be nil")
+	}{{ else }}if reflect.DeepEqual({{LowerCamelCase .Name}}, {{.Type}}{}) {
+		panic("{{$.StructName}}Builder: {{.Name}} must not be empty")
+	}{{ end }}{{ end }}
     {{ReceiverName $.StructName}}b.target.{{.Name}} = {{LowerCamelCase .Name}}
 
     return {{ReceiverName $.StructName}}b

@@ -12,13 +12,16 @@ import (
 )
 
 type Field struct {
-	Name string
-	Type string
+	Name      string
+	Type      string
+	MustBuild bool
+	IsPointer bool
 }
 
 type StructFields struct {
-	StructName string
-	Fields     []Field
+	StructName         string
+	Fields             []Field
+	DefaultConstructor bool
 }
 
 func exprToString(expr ast.Expr) string {
@@ -29,7 +32,7 @@ func exprToString(expr ast.Expr) string {
 	return buf.String()
 }
 
-func AllArgsConstructor(name string, fields []*ast.Field) (string, error) {
+func AllArgsConstructor(name string, fields []*ast.Field, isDefault bool) (string, error) {
 	// 모든 필드를 리스트에 추가합니다.
 	allFields := make([]Field, 0)
 	for _, field := range fields {
@@ -65,8 +68,9 @@ func AllArgsConstructor(name string, fields []*ast.Field) (string, error) {
 
 	var buf bytes.Buffer
 	err = tmpl.Execute(&buf, StructFields{
-		StructName: name,
-		Fields:     allFields,
+		StructName:         name,
+		Fields:             allFields,
+		DefaultConstructor: isDefault,
 	})
 
 	if err != nil {
@@ -77,7 +81,7 @@ func AllArgsConstructor(name string, fields []*ast.Field) (string, error) {
 	return buf.String(), nil
 }
 
-func RequiredArgsConstructor(name string, fields []*ast.Field) (string, error) {
+func RequiredArgsConstructor(name string, fields []*ast.Field, isDefault bool) (string, error) {
 	requiredFields := make([]Field, 0)
 
 	for _, field := range fields {
@@ -116,8 +120,9 @@ func RequiredArgsConstructor(name string, fields []*ast.Field) (string, error) {
 	var buf bytes.Buffer
 
 	err = tmpl.Execute(&buf, StructFields{
-		StructName: name,
-		Fields:     requiredFields,
+		StructName:         name,
+		Fields:             requiredFields,
+		DefaultConstructor: isDefault,
 	})
 
 	if err != nil {
@@ -128,7 +133,7 @@ func RequiredArgsConstructor(name string, fields []*ast.Field) (string, error) {
 	return buf.String(), nil
 }
 
-func NoArgsConstructor(name string) (string, error) {
+func NoArgsConstructor(name string, isDefault bool) (string, error) {
 	tmpl, err := template.New("noArgsConstructorTemplate").Parse(noArgsConstructorTemplate)
 	if err != nil {
 		return "", err
@@ -137,7 +142,8 @@ func NoArgsConstructor(name string) (string, error) {
 	var buf bytes.Buffer
 
 	err = tmpl.Execute(&buf, StructFields{
-		StructName: name,
+		StructName:         name,
+		DefaultConstructor: isDefault,
 	})
 
 	if err != nil {
@@ -158,6 +164,25 @@ func Builder(name string, fields []*ast.Field) (string, error) {
 			if value, exists := tag.Lookup("builder"); exists && strings.Contains(value, "ignore") {
 				continue
 			}
+
+			// 필드에 builder 태그가 있고 must로 정의되어 있다면 필드를 추가합니다.
+			if value, exists := tag.Lookup("builder"); exists && strings.Contains(value, "must") {
+				var isPointer bool
+				if strings.Contains(exprToString(field.Type), "*") {
+					isPointer = true
+				}
+				// embedded 필드
+				if field.Names == nil {
+					allFields = append(allFields, Field{Name: exprToString(field.Type), Type: exprToString(field.Type), MustBuild: true, IsPointer: isPointer})
+					continue
+				}
+
+				// 일반 필드
+				for _, fieldName := range field.Names {
+					allFields = append(allFields, Field{Name: fieldName.Name, Type: exprToString(field.Type), MustBuild: true, IsPointer: isPointer})
+				}
+				continue
+			}
 		}
 
 		// embedded 필드
@@ -172,7 +197,7 @@ func Builder(name string, fields []*ast.Field) (string, error) {
 		}
 	}
 
-	tmpl, err := template.New("builderTemplate").Funcs(template.FuncMap{
+	tmpl, err := template.New("z").Funcs(template.FuncMap{
 		"LowerCamelCase": stringpkg.LowerCamel,
 		"ReceiverName":   stringpkg.ReceiverName,
 	}).Parse(builderTemplate)
