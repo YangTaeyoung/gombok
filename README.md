@@ -86,17 +86,41 @@ $ go install github.com/YangTaeyoung/gombok@v1.1.0
 | `@ToString` | ToString 함수를 생성합니다.                                            |
 | `@Equals` | Equals 함수를 생성합니다.                                              | 
 
+## Default Constructor
+`// @{생성자 어노테이션}.Default`를 통해 해당 생성자를 패키지의 기본 생성자 `New()`로 만들 수 있습니다.
+```go
+// some_file.go
+// Test
+// @AllArgsConstructor.Default
+type Test struct {
+    Name string
+    Age  int
+}
+```
+```go
+// some_file_gombok.go
+
+// New
+func New(name string, age int) Test {
+   return Test{
+      Name: name,
+      Age:  age,
+   }
+}
+```
+
 # Tags
 다음 태그를 이용하여 gombok을 통해 생성되는 함수의 동작을 변경할 수 있습니다.
 
-| Tag           | Value | Description                                                                                             |
-|---------------| --- |---------------------------------------------------------------------------------------------------------|
-| `validate`    | `required` | @RequiredArgsConstructor 어노테이션을 통해 생성되는 필드를 지정할 수 있습니다.                                                 |
-| `constructor` | `ignore` | 해당 태그가 지정된 필드의 경우 `@AllArgsConstructor`, `@RequiredArgsConstructor` 어노테이션을 통해 생성되는 Constructor에서 제외됩니다. |
-| `builder`     | `ignore` | 해당 태그가 지정된 필드의 경우 `@Builder` 어노테이션을 통해 생성되는 `Builder`에서 `WithXXX()` 메서드가 생성되지 않습니다.                     |
-| `getter`      | `ignore` | 해당 태그가 지정된 필드의 경우 `@Getter` 어노테이션을 통해 생성되는 해당 필드의 Getter 메서드가 생성되지 않습니다.                                |
-| `setter`      | `ignore` | 해당 태그가 지정된 필드의 경우 `@Setter` 어노테이션을 통해 생성되는 해당 필드의 Setter 메서드가 생성되지 않습니다.                                |
-| `to_string`   | `ignore` | 해당 태그가 지정된 필드의 경우 `@ToString` 어노테이션을 통해 생성되는 `String()` 메서드에서 제외됩니다.                                    |
+| Tag         | Value | Description                                                                                                        |
+|-------------| --- |--------------------------------------------------------------------------------------------------------------------|
+| `validate`  | `required` | @RequiredArgsConstructor 어노테이션을 통해 생성되는 필드를 지정할 수 있습니다.                                                            |
+| `constructor` | `ignore` | 해당 태그가 지정된 필드의 경우 `@AllArgsConstructor`, `@RequiredArgsConstructor` 어노테이션을 통해 생성되는 Constructor에서 제외됩니다.            |
+| `builder`   | `ignore` | 해당 태그가 지정된 필드의 경우 `@Builder` 어노테이션을 통해 생성되는 `Builder`에서 `WithXXX()` 메서드가 생성되지 않습니다.                                |
+| `builder` | `must` | 해당 태그가 지정된 필드의 경우 `@Builder` 어노테이션을 통해 생성되는 `WithXXX()` 메서드에서 해당 변수가 zero value이거나 포인터 타입인데 nil인 경우 panic을 발생시킵니다. |
+| `getter`    | `ignore` | 해당 태그가 지정된 필드의 경우 `@Getter` 어노테이션을 통해 생성되는 해당 필드의 Getter 메서드가 생성되지 않습니다.                                           |
+| `setter`    | `ignore` | 해당 태그가 지정된 필드의 경우 `@Setter` 어노테이션을 통해 생성되는 해당 필드의 Setter 메서드가 생성되지 않습니다.                                           |
+| `to_string` | `ignore` | 해당 태그가 지정된 필드의 경우 `@ToString` 어노테이션을 통해 생성되는 `String()` 메서드에서 제외됩니다.                                               |
 
 
 ## Example 

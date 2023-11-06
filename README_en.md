@@ -17,7 +17,7 @@ $ go install github.com/YangTaeyoung/gombok@v1.1.0
 ```bash
 cd <path>
 ```
-- 다음과 같은 파일이 있다고 가정합니다.
+- Assume you have the following file.
      ```go
      // in ./test/test.go
      
@@ -86,6 +86,30 @@ $ gombok
 | `@ToString` | Creates a `ToString()` function.                                                   |
 | `@Equals` | Creates an `Equals()` function.                                                    |
 
+## Default Constructor
+`// @{Constructor Annotation}` can be used to make the constructor the default constructor `New()` of the package.
+
+```go
+// some_file.go
+// Test
+// @AllArgsConstructor.Default
+type Test struct {
+    Name string
+    Age  int
+}
+```
+```go
+// some_file_gombok.go
+
+// New
+func New(name string, age int) Test {
+   return Test{
+      Name: name,
+      Age:  age,
+   }
+}
+```
+
 # Tags
 다음 태그를 이용하여 gombok을 통해 생성되는 함수의 동작을 변경할 수 있습니다.
 
@@ -94,6 +118,7 @@ $ gombok
 | `validate` | `required` | Specifies the fields created by the @RequiredArgsConstructor annotation. |
 | `constructor` | `ignore` | The field with this tag is excluded from the Constructor created by the `@AllArgsConstructor` and `@RequiredArgsConstructor` annotations. |
 | `builder`     | `ignore` | The `WithXXX()` method is not created in the `Builder` created by the `@Builder` annotation for the field with this tag.                     |
+| `builder` | `must` | If the field with this tag is zero value or nil for pointer type, panic is raised in the `WithXXX()` method created by the `@Builder` annotation. |
 | `getter`      | `ignore` | The Getter method of the corresponding field created by the `@Getter` annotation is not created for the field with this tag.                                |
 | `setter`      | `ignore` | The Setter method of the corresponding field created by the `@Setter` annotation is not created for the field with this tag.                                |
 | `to_string`   | `ignore` | The `String()` method created by the `@ToString` annotation is excluded from the field with this tag.                                    |
@@ -102,8 +127,8 @@ $ gombok
 ## Trouble Shooting 👊
 
 ```bash
-$ aws-secret-gen
-> zsh: command not found: aims-cli
+$ gombok
+> zsh: command not found: gombok
 ```
 error that occurs when running a program installed with go. 
 
